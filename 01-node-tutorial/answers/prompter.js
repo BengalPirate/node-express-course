@@ -14,25 +14,32 @@ const getBody = (req, callback) => {
     const resultHash = {};
     bodyArray.forEach((part) => {
       const partArray = part.split("=");
-      resultHash[partArray[0]] = partArray[1];
+      resultHash[partArray[0]] = partArray[1].replace(/\+/g, " "); // Replacing '+' with space
     });
     callback(resultHash);
   });
 };
 
-// here, you could declare one or more variables to store what comes back from the form.
-let item = "Enter something below.";
+// Array to store each guestbook entry
+let guestbookEntries = [];
 
-// here, you can change the form below to modify the input fields and what is displayed.
-// This is just ordinary html with string interpolation.
+// Updated form to collect name and message
 const form = () => {
+  let entriesHTML = guestbookEntries
+    .map((entry) => `<p><strong>${entry.name}:</strong> ${entry.message}</p>`)
+    .join("");
   return `
   <body>
-  <p>${item}</p>
-  <form method="POST">
-  <input name="item"></input>
-  <button type="submit">Submit</button>
-  </form>
+    <h1>Guestbook</h1>
+    <form method="POST">
+      <label for="name">Name:</label>
+      <input name="name" required></input><br><br>
+      <label for="message">Message:</label>
+      <input name="message" required></input><br><br>
+      <button type="submit">Submit</button>
+    </form>
+    <h2>Entries</h2>
+    ${entriesHTML || "<p>No entries yet.</p>"}
   </body>
   `;
 };
@@ -43,13 +50,14 @@ const server = http.createServer((req, res) => {
   if (req.method === "POST") {
     getBody(req, (body) => {
       console.log("The body of the post is ", body);
-      // here, you can add your own logic
-      if (body["item"]) {
-        item = body["item"];
-      } else {
-        item = "Nothing was entered.";
+      // Add new entry to guestbook
+      if (body["name"] && body["message"]) {
+        guestbookEntries.push({
+          name: body["name"],
+          message: body["message"],
+        });
       }
-      // Your code changes would end here
+      // Redirect to the homepage
       res.writeHead(303, {
         Location: "/",
       });
@@ -59,6 +67,10 @@ const server = http.createServer((req, res) => {
     res.end(form());
   }
 });
+
+server.on("request", (req) => {  
+  console.log("event received: ", req.method, req.url);  
+});  
 
 server.listen(3000);
 console.log("The server is listening on port 3000.");
